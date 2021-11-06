@@ -7,13 +7,14 @@ function Logger(logString: string) {
 }
 
 function WithTemplate(template: string, hookId: string) {
-  return function <T extends { new (...args: any): { name: string } }>(
+  console.log("TEMPLATE FACTORY");
+  return function <T extends { new (...args: any[]): { name: string } }>(
     originalConstructor: T
   ) {
     return class extends originalConstructor {
       constructor(..._: any[]) {
         super();
-        console.log("TEMPLATE FACTORY");
+        console.log("Rendering template");
         const hookEl = document.getElementById(hookId);
         if (hookEl) {
           hookEl.innerHTML = template;
@@ -24,8 +25,8 @@ function WithTemplate(template: string, hookId: string) {
   };
 }
 
-// @Logger("LOGGING - PERSON")
-@Logger("Logging")
+// @Logger('LOGGING - PERSON')
+@Logger("LOGGING")
 @WithTemplate("<h1>My Person Object</h1>", "app")
 class Person {
   name = "Max";
@@ -53,14 +54,18 @@ function Log2(target: any, name: string, descriptor: PropertyDescriptor) {
   console.log(descriptor);
 }
 
-function Log3(target: any, name: string, descriptor: PropertyDescriptor) {
+function Log3(
+  target: any,
+  name: string | Symbol,
+  descriptor: PropertyDescriptor
+) {
   console.log("Method decorator!");
   console.log(target);
   console.log(name);
   console.log(descriptor);
 }
 
-function Log4(target: any, name: String | Symbol, position: number) {
+function Log4(target: any, name: string | Symbol, position: number) {
   console.log("Parameter decorator!");
   console.log(target);
   console.log(name);
@@ -127,7 +132,7 @@ button.addEventListener("click", p.showMessage);
 
 interface ValidatorConfig {
   [property: string]: {
-    [validatableProp: string]: string[];
+    [validatableProp: string]: string[]; // ['required', 'positive']
   };
 }
 
@@ -135,12 +140,14 @@ const registeredValidators: ValidatorConfig = {};
 
 function Required(target: any, propName: string) {
   registeredValidators[target.constructor.name] = {
+    ...registeredValidators[target.constructor.name],
     [propName]: ["required"],
   };
 }
 
 function PositiveNumber(target: any, propName: string) {
   registeredValidators[target.constructor.name] = {
+    ...registeredValidators[target.constructor.name],
     [propName]: ["positive"],
   };
 }
@@ -150,17 +157,20 @@ function validate(obj: any) {
   if (!objValidatorConfig) {
     return true;
   }
+  let isValid = true;
   for (const prop in objValidatorConfig) {
-    for (const validator in objValidatorConfig[prop]) {
+    for (const validator of objValidatorConfig[prop]) {
       switch (validator) {
         case "required":
-          return !!obj[prop];
+          isValid = isValid && !!obj[prop];
+          break;
         case "positive":
-          return obj[prop] > 0;
+          isValid = isValid && obj[prop] > 0;
+          break;
       }
     }
   }
-  return true;
+  return isValid;
 }
 
 class Course {
@@ -185,10 +195,10 @@ courseForm.addEventListener("submit", (event) => {
   const price = +priceEl.value;
 
   const createdCourse = new Course(title, price);
-  console.log(createdCourse);
 
   if (!validate(createdCourse)) {
     alert("Invalid input, please try again!");
     return;
   }
+  console.log(createdCourse);
 });
